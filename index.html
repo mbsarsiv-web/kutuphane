@@ -137,7 +137,7 @@
     </div>
 
     <!-- YENİ ŞİFRE GİRİŞ MODALI -->
-    <div id="sifreModal" class="modal-arkaplan" style="z-index: 1001;"> <!-- Z-index artırıldı ki silme modalının altında kalmasın -->
+    <div id="sifreModal" class="modal-arkaplan" style="z-index: 1001;">
         <div class="modal-icerik">
             <h4 style="margin-top: 0; color: #333;">Yönetici Onayı</h4>
             <p style="color: #666; font-size: 14px; margin-bottom: 15px;">İşlem yapabilmek için lütfen yönetici şifrenizi girin:</p>
@@ -156,7 +156,7 @@
         var silinecekTur = null; 
         var mevcutKutuphane = [];
         var mevcutAlinacaklar = [];
-        var sifreBekleniyor = false; // Şifre modalı açıkken birden fazla istek gitmesini engeller
+        var sifreBekleniyor = false; 
 
         // ==========================================
         // ŞİFRE YÖNETİMİ
@@ -167,12 +167,11 @@
                 if (sifre) {
                     resolve(sifre); 
                 } else {
-                    if (sifreBekleniyor) return; // Zaten açıksa tekrar açma
+                    if (sifreBekleniyor) return; 
                     sifreBekleniyor = true;
                     const modal = document.getElementById('sifreModal');
                     const input = document.getElementById('sifreInput');
                     
-                    // Eğer silme modalı açıksa onu gizle ki üst üste binmesinler
                     document.getElementById('silOnayModal').style.display = 'none';
 
                     modal.style.display = 'block';
@@ -220,7 +219,6 @@
         async function veriGonder(islem, veriObj, id) {
             const sifre = await getSifre();
             if(!sifre) {
-                // Şifre iptal edildiyse, silme butonunun yazısını düzelt
                 var silBtn = document.querySelector('#silOnayModal .btn-onay');
                 if(silBtn) silBtn.innerText = "Evet, Sil";
                 return null; 
@@ -467,17 +465,24 @@
         }
 
         // ==========================================
-        // ORTAK YARDIMCI FONKSİYONLAR
+        // SİLME VE ONAY İŞLEMLERİ (SIRA GÜNCELLENDİ)
         // ==========================================
         function kapatSatirDuzenle() {
             var acikSatir = document.getElementById('aktif-duzenleme-satiri');
             if (acikSatir) acikSatir.remove();
         }
 
-        function silOnayiIste(id, tur) {
+        // 1. ADIM: Sil'e basıldığında ÖNCE ŞİFRE kontrol edilir
+        async function silOnayiIste(id, tur) {
             silinecekId = id; 
             silinecekTur = tur; 
-            document.getElementById('silOnayModal').style.display = 'block';
+            
+            // Şifreyi doğrula (kayıtlı değilse modal açılır, girmesini bekler)
+            const sifre = await getSifre();
+            if (sifre) {
+                // Şifre tamamsa "Emin misiniz?" onay penceresini aç
+                document.getElementById('silOnayModal').style.display = 'block';
+            }
         }
 
         function modalKapat() {
@@ -487,6 +492,7 @@
             document.querySelector('#silOnayModal .btn-onay').innerText = "Evet, Sil";
         }
 
+        // 2. ADIM: "Evet, Sil" seçilirse direkt silme gerçekleşir
         async function kesinSil() {
             if(silinecekId !== null && silinecekTur !== null) {
                 kapatSatirDuzenle(); 
