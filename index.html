@@ -2,7 +2,6 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <!-- MOBİL UYUMLULUK ETİKETİ -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Akıllı Kütüphane</title>
     <style>
@@ -11,7 +10,6 @@
         .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
         input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 15px; }
         
-        /* YENİ ARAMA KUTUSU TASARIMI */
         .arama-kapsayici { position: relative; margin-bottom: 15px; }
         .arama-ikon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
         .arama-kutusu { width: 100%; border: 2px solid #007bff; border-radius: 20px; padding: 10px 15px 10px 40px; margin-bottom: 0; font-size: 15px; outline: none; transition: 0.3s; box-sizing: border-box; }
@@ -21,7 +19,6 @@
         .btn-sil { background: #dc3545; color: white; padding: 6px 10px; border-radius: 4px; font-weight: normal; width: auto; font-size: 14px; }
         .btn-duzenle { background: #ffc107; color: #000; padding: 6px 10px; border-radius: 4px; font-weight: normal; width: auto; margin-right: 5px; margin-bottom: 5px; font-size: 14px; }
         
-        /* MOBİL İÇİN TABLO KAYDIRMA ZARFI */
         .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 650px; }
         th, td { border: 1px solid #ddd; padding: 10px 8px; text-align: left; font-size: 14px; }
@@ -29,21 +26,18 @@
         .merkez { text-align: center !important; }
         .islem-sutun { white-space: nowrap; text-align: center; }
 
-        /* SATIR İÇİ DÜZENLEME ALANI */
         .edit-row { background-color: #fff9e6; } 
         .edit-container { display: flex; gap: 8px; padding: 5px; flex-wrap: wrap; align-items: center; }
         .edit-container input { flex: 1; min-width: 100px; margin: 0; border: 1px solid #ffc107; padding: 8px; font-size: 14px; }
         .btn-kaydet-inline { background: #28a745; color: white; padding: 8px 12px; font-size: 14px; width: auto; }
         .btn-iptal-inline { background: #6c757d; color: white; padding: 8px 12px; font-size: 14px; width: auto; }
 
-        /* SEKMELER */
         .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #ddd; width: 100%; overflow-x: auto; }
         .tab-link { flex: 1; text-align: center; padding: 12px 10px; cursor: pointer; background: #e2e2e7; border: 1px solid #ccc; border-bottom: none; border-top-left-radius: 6px; border-top-right-radius: 6px; font-weight: bold; color: #555; transition: 0.2s; font-size: 14px; white-space: nowrap; }
         .tab-link.active { background: #007bff; color: white; border-color: #007bff; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* ONAY MODALI VE ŞİFRE MODALI */
         .modal-arkaplan { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
         .modal-icerik { background-color: #fff; margin: 25% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         .modal-butonlar { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
@@ -66,7 +60,6 @@
         <!-- 1. MEVCUT KÜTÜPHANE SEKMESİ -->
         <div id="kutuphane-sekme" class="tab-content active">
             <div class="card">
-                <!-- YENİ ARAMA KUTUSU TASARIMI -->
                 <div class="arama-kapsayici">
                     <span class="arama-ikon">🔍</span>
                     <input type="text" id="aramaKutusu" class="arama-kutusu" onkeyup="kutuphaneAra()" placeholder="Kütüphanede Ara (Yazar, Kitap Adı, Yayınevi)...">
@@ -144,7 +137,7 @@
     </div>
 
     <!-- YENİ ŞİFRE GİRİŞ MODALI -->
-    <div id="sifreModal" class="modal-arkaplan">
+    <div id="sifreModal" class="modal-arkaplan" style="z-index: 1001;"> <!-- Z-index artırıldı ki silme modalının altında kalmasın -->
         <div class="modal-icerik">
             <h4 style="margin-top: 0; color: #333;">Yönetici Onayı</h4>
             <p style="color: #666; font-size: 14px; margin-bottom: 15px;">İşlem yapabilmek için lütfen yönetici şifrenizi girin:</p>
@@ -157,48 +150,50 @@
     </div>
     
     <script>
-        // ==========================================
-        // AYARLAR VE DEĞİŞKENLER
-        // ==========================================
-        // Web Uygulaması URL'niz:
         const API_URL = "https://script.google.com/macros/s/AKfycbyvVeOr6ZdijzLGeLe2VAHkfUNg-drBVhB3gN7HHAkiFRU3Vwo9c9TS7wCu5k86sBpz_Q/exec";
 
         var silinecekId = null;
         var silinecekTur = null; 
         var mevcutKutuphane = [];
         var mevcutAlinacaklar = [];
+        var sifreBekleniyor = false; // Şifre modalı açıkken birden fazla istek gitmesini engeller
 
         // ==========================================
-        // YENİ ŞİFRE YÖNETİMİ (PROMISE TABANLI)
+        // ŞİFRE YÖNETİMİ
         // ==========================================
         function getSifre() {
             return new Promise((resolve) => {
                 let sifre = localStorage.getItem('kutuphaneSifre');
                 if (sifre) {
-                    resolve(sifre); // Kayıtlı şifre varsa direkt devam et
+                    resolve(sifre); 
                 } else {
-                    // Kayıtlı şifre yoksa özel Modalı aç
+                    if (sifreBekleniyor) return; // Zaten açıksa tekrar açma
+                    sifreBekleniyor = true;
                     const modal = document.getElementById('sifreModal');
                     const input = document.getElementById('sifreInput');
+                    
+                    // Eğer silme modalı açıksa onu gizle ki üst üste binmesinler
+                    document.getElementById('silOnayModal').style.display = 'none';
+
                     modal.style.display = 'block';
                     input.value = '';
-                    setTimeout(() => input.focus(), 100); // Açıldığında imleci içine konumlandır
+                    setTimeout(() => input.focus(), 100); 
 
-                    // Onaylama işlemi
                     window.sifreOnay = function() {
                         const girilenSifre = input.value;
                         if (girilenSifre) {
                             localStorage.setItem('kutuphaneSifre', girilenSifre);
                             modal.style.display = 'none';
+                            sifreBekleniyor = false;
                             resolve(girilenSifre);
                         } else {
                             alert("Şifre boş bırakılamaz!");
                         }
                     };
 
-                    // İptal etme işlemi
                     window.sifreIptal = function() {
                         modal.style.display = 'none';
+                        sifreBekleniyor = false;
                         resolve(null);
                     };
                 }
@@ -206,7 +201,7 @@
         }
 
         // ==========================================
-        // VERİ TRANSFERİ (FETCH API)
+        // VERİ TRANSFERİ
         // ==========================================
         async function veriGetir(islem) {
             document.getElementById('loader').style.display = 'block';
@@ -223,9 +218,13 @@
         }
 
         async function veriGonder(islem, veriObj, id) {
-            // Şifreyi await ile bekletiyoruz (Modal açılırsa kullanıcının girmesini bekler)
             const sifre = await getSifre();
-            if(!sifre) return null; // İptale basıldıysa işlemi durdur
+            if(!sifre) {
+                // Şifre iptal edildiyse, silme butonunun yazısını düzelt
+                var silBtn = document.querySelector('#silOnayModal .btn-onay');
+                if(silBtn) silBtn.innerText = "Evet, Sil";
+                return null; 
+            }
 
             document.getElementById('loader').style.display = 'block';
             
@@ -242,15 +241,18 @@
                 if (sonuc.hata) {
                     alert("İşlem Başarısız: " + sonuc.hata);
                     if(sonuc.hata.includes("Yetkisiz")) {
-                        // Şifre yanlışsa sistemden sil, bir sonraki denemede tekrar şifre sorsun
                         localStorage.removeItem('kutuphaneSifre');
                     }
+                    var silBtn = document.querySelector('#silOnayModal .btn-onay');
+                    if(silBtn) silBtn.innerText = "Evet, Sil";
                     return null;
                 }
                 return sonuc.data;
             } catch (e) {
                 document.getElementById('loader').style.display = 'none';
                 alert("Bağlantı hatası: Sunucuya ulaşılamadı.");
+                var silBtn = document.querySelector('#silOnayModal .btn-onay');
+                if(silBtn) silBtn.innerText = "Evet, Sil";
                 return null;
             }
         }
@@ -492,13 +494,17 @@
                 
                 if(silinecekTur === 'kutuphane') {
                     const yeniVeri = await veriGonder('kitapSil', null, silinecekId);
-                    if(yeniVeri) render(yeniVeri);
+                    if(yeniVeri) {
+                        render(yeniVeri);
+                        modalKapat();
+                    }
                 } else if(silinecekTur === 'alinacak') {
                     const yeniVeri = await veriGonder('alinacakSil', null, silinecekId);
-                    if(yeniVeri) renderAlinacak(yeniVeri);
+                    if(yeniVeri) {
+                        renderAlinacak(yeniVeri);
+                        modalKapat();
+                    }
                 }
-                
-                modalKapat();
             }
         }
     </script>
