@@ -1,0 +1,456 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <!-- MOBİL UYUMLULUK ETİKETİ -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Akıllı Kütüphane</title>
+    <style>
+        body { font-family: sans-serif; background: #f4f4f9; padding: 15px; margin: 0; }
+        .container { max-width: 1000px; margin: auto; }
+        .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
+        input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 15px; }
+        
+        .arama-kutusu { border: 2px solid #007bff; border-radius: 20px; padding: 10px 15px; margin-bottom: 15px; font-size: 15px; outline: none; transition: 0.3s; }
+        .arama-kutusu:focus { box-shadow: 0 0 8px rgba(0, 123, 255, 0.4); }
+
+        button { background: #007bff; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 15px; transition: 0.2s; }
+        .btn-sil { background: #dc3545; color: white; padding: 6px 10px; border-radius: 4px; font-weight: normal; width: auto; font-size: 14px; }
+        .btn-duzenle { background: #ffc107; color: #000; padding: 6px 10px; border-radius: 4px; font-weight: normal; width: auto; margin-right: 5px; margin-bottom: 5px; font-size: 14px; }
+        
+        /* MOBİL İÇİN TABLO KAYDIRMA ZARFI */
+        .table-wrapper { overflow-x: auto; -webkit-overflow-scrolling: touch; width: 100%; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; min-width: 650px; }
+        th, td { border: 1px solid #ddd; padding: 10px 8px; text-align: left; font-size: 14px; }
+        th { background: #007bff; color: white; }
+        .merkez { text-align: center !important; }
+        .islem-sutun { white-space: nowrap; text-align: center; }
+
+        /* SATIR İÇİ DÜZENLEME ALANI */
+        .edit-row { background-color: #fff9e6; } 
+        .edit-container { display: flex; gap: 8px; padding: 5px; flex-wrap: wrap; align-items: center; }
+        .edit-container input { flex: 1; min-width: 100px; margin: 0; border: 1px solid #ffc107; padding: 8px; font-size: 14px; }
+        .btn-kaydet-inline { background: #28a745; color: white; padding: 8px 12px; font-size: 14px; width: auto; }
+        .btn-iptal-inline { background: #6c757d; color: white; padding: 8px 12px; font-size: 14px; width: auto; }
+
+        /* SEKMELER */
+        .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #ddd; width: 100%; overflow-x: auto; }
+        .tab-link { flex: 1; text-align: center; padding: 12px 10px; cursor: pointer; background: #e2e2e7; border: 1px solid #ccc; border-bottom: none; border-top-left-radius: 6px; border-top-right-radius: 6px; font-weight: bold; color: #555; transition: 0.2s; font-size: 14px; white-space: nowrap; }
+        .tab-link.active { background: #007bff; color: white; border-color: #007bff; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        /* ONAY MODALI */
+        .modal-arkaplan { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-icerik { background-color: #fff; margin: 25% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
+        .modal-butonlar { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
+        .btn-iptal, .btn-onay { width: 50%; padding: 10px; }
+        
+        #loader { text-align: center; padding: 15px; font-weight: bold; color: #007bff; display: none; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        <div class="tabs">
+            <div id="tab-kutuphane" class="tab-link active" onclick="sekmeDegistir(event, 'kutuphane-sekme')">MEVCUT KÜTÜPHANE</div>
+            <div id="tab-ekle" class="tab-link" onclick="sekmeDegistir(event, 'ekle-sekme')">KİTAP EKLE</div>
+            <div id="tab-alinacaklar" class="tab-link" onclick="sekmeDegistir(event, 'alinacaklar-sekme')">ALINACAKLAR</div>
+        </div>
+
+        <div id="loader">Yükleniyor... Lütfen bekleyin.</div>
+
+        <!-- 1. MEVCUT KÜTÜPHANE SEKMESİ -->
+        <div id="kutuphane-sekme" class="tab-content active">
+            <div class="card">
+                <input type="text" id="aramaKutusu" class="arama-kutusu" onkeyup="kutuphaneAra()" placeholder="🔍 Kütüphanede Ara (Yazar, Kitap Adı, Yayınevi)...">
+                
+                <div class="table-wrapper">
+                    <table id="tablo">
+                        <thead>
+                            <tr>
+                                <th class="merkez">NO</th>
+                                <th>YAZAR</th>
+                                <th>KİTAP ADI</th>
+                                <th class="merkez">SAYFA</th>
+                                <th class="merkez">BASIM YILI</th>
+                                <th>YAYINEVİ</th>
+                                <th class="merkez">İŞLEM</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. KİTAP EKLE SEKMESİ -->
+        <div id="ekle-sekme" class="tab-content">
+            <div class="card">
+                <h3>YENİ KİTAP EKLE</h3>
+                <input id="yazar" placeholder="Yazar">
+                <input id="kitapAdi" placeholder="Kitap Adı">
+                <input id="sayfa" type="number" placeholder="Sayfa">
+                <input id="yil" type="number" placeholder="Basım Yılı">
+                <input id="yayinevi" placeholder="Yayınevi">
+                <button id="btn-kaydet-kutuphane" onclick="kaydet()">Kaydet ve Sırala</button>
+            </div>
+        </div>
+
+        <!-- 3. ALINACAK KİTAPLAR SEKMESİ -->
+        <div id="alinacaklar-sekme" class="tab-content">
+            <div class="card">
+                <h3>YENİ ALINACAK KİTAP</h3>
+                <input id="alinacakYazar" placeholder="Yazar">
+                <input id="alinacakKitapAdi" placeholder="Kitap Adı">
+                <button id="btn-kaydet-alinacak" onclick="kaydetAlinacak()">Kaydet ve Sırala</button>
+            </div>
+            <div class="card">
+                <div class="table-wrapper">
+                    <table id="tabloAlinacak">
+                        <thead>
+                            <tr>
+                                <th class="merkez">NO</th>
+                                <th>YAZAR</th>
+                                <th>KİTAP ADI</th>
+                                <th class="merkez">İŞLEM</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- SİLME ONAY MODALI -->
+    <div id="silOnayModal" class="modal-arkaplan">
+        <div class="modal-icerik">
+            <h4 style="margin-top: 0; color: #333;">Emin misiniz?</h4>
+            <p style="color: #666;">Bu kaydı silmek istediğinize emin misiniz?</p>
+            <div class="modal-butonlar">
+                <button class="btn-iptal" onclick="modalKapat()">İptal</button>
+                <button class="btn-sil btn-onay" onclick="kesinSil()">Evet, Sil</button>
+            </div>
+        </div>
+    </div>
+    
+    <script>
+        // ==========================================
+        // AYARLAR VE DEĞİŞKENLER
+        // ==========================================
+        // Web Uygulaması URL'niz:
+        const API_URL = "https://script.google.com/macros/s/AKfycbyvVeOr6ZdijzLGeLe2VAHkfUNg-drBVhB3gN7HHAkiFRU3Vwo9c9TS7wCu5k86sBpz_Q/exec";
+
+        var silinecekId = null;
+        var silinecekTur = null; 
+        var mevcutKutuphane = [];
+        var mevcutAlinacaklar = [];
+
+        // ==========================================
+        // GÜVENLİK VE VERİ TRANSFERİ (FETCH API)
+        // ==========================================
+        function getSifre() {
+            let sifre = localStorage.getItem('kutuphaneSifre');
+            if (!sifre) {
+                sifre = prompt("Kütüphane Yönetimi\nİşlem yapabilmek için lütfen yönetici şifrenizi girin:");
+                if (sifre) localStorage.setItem('kutuphaneSifre', sifre);
+            }
+            return sifre;
+        }
+
+        async function veriGetir(islem) {
+            document.getElementById('loader').style.display = 'block';
+            try {
+                const response = await fetch(API_URL + "?islem=" + islem);
+                const veri = await response.json();
+                document.getElementById('loader').style.display = 'none';
+                return veri;
+            } catch(e) {
+                document.getElementById('loader').style.display = 'none';
+                alert("Bağlantı hatası: Veriler yüklenemedi.");
+                return [];
+            }
+        }
+
+        async function veriGonder(islem, veriObj, id) {
+            const sifre = getSifre();
+            if(!sifre) return null; // Kullanıcı iptal ettiyse durdur
+
+            document.getElementById('loader').style.display = 'block';
+            
+            try {
+                const payload = { islem: islem, sifre: sifre, veri: veriObj, id: id };
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    body: JSON.stringify(payload)
+                });
+                
+                const sonuc = await response.json();
+                document.getElementById('loader').style.display = 'none';
+
+                if (sonuc.hata) {
+                    alert("İşlem Başarısız: " + sonuc.hata);
+                    if(sonuc.hata.includes("Yetkisiz")) {
+                        localStorage.removeItem('kutuphaneSifre');
+                    }
+                    return null;
+                }
+                return sonuc.data;
+            } catch (e) {
+                document.getElementById('loader').style.display = 'none';
+                alert("Bağlantı hatası: Sunucuya ulaşılamadı.");
+                return null;
+            }
+        }
+
+        // ==========================================
+        // BAŞLANGIÇ YÜKLEMESİ VE ARAMA
+        // ==========================================
+        window.onload = async () => {
+            const kitaplar = await veriGetir('getKitaplar');
+            render(kitaplar);
+            const alinacaklar = await veriGetir('getAlinacaklar');
+            renderAlinacak(alinacaklar);
+        };
+
+        function kutuphaneAra() {
+            var input = document.getElementById("aramaKutusu");
+            var filter = input.value.toLocaleLowerCase('tr-TR');
+            var table = document.getElementById("tablo");
+            var tr = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
+
+            for (var i = 0; i < tr.length; i++) {
+                if (tr[i].id === 'aktif-duzenleme-satiri') continue;
+                var td = tr[i].getElementsByTagName("td");
+                var matchFound = false;
+                for (var j = 1; j < td.length - 1; j++) {
+                    if (td[j]) {
+                        var txtValue = td[j].textContent || td[j].innerText;
+                        if (txtValue.toLocaleLowerCase('tr-TR').indexOf(filter) > -1) {
+                            matchFound = true; break;
+                        }
+                    }
+                }
+                tr[i].style.display = (matchFound || filter === "") ? "" : "none";
+            }
+        }
+
+        function sekmeDegistir(evt, sekmeId) {
+            var tabcontent = document.getElementsByClassName("tab-content");
+            for (var i = 0; i < tabcontent.length; i++) { tabcontent[i].classList.remove("active"); }
+            var tablinks = document.getElementsByClassName("tab-link");
+            for (var i = 0; i < tablinks.length; i++) { tablinks[i].classList.remove("active"); }
+            document.getElementById(sekmeId).classList.add("active");
+            evt.currentTarget.classList.add("active");
+            kapatSatirDuzenle(); 
+        }
+
+        // ==========================================
+        // KÜTÜPHANE İŞLEMLERİ
+        // ==========================================
+        async function kaydet() {
+            var btn = document.getElementById('btn-kaydet-kutuphane');
+            var veri = { 
+                yazar: document.getElementById('yazar').value, 
+                kitapAdi: document.getElementById('kitapAdi').value, 
+                sayfa: document.getElementById('sayfa').value, 
+                yil: document.getElementById('yil').value, 
+                yayinevi: document.getElementById('yayinevi').value 
+            };
+            
+            btn.innerText = "Kaydediliyor...";
+            const yeniVeri = await veriGonder('kitapEkle', veri, null);
+            btn.innerText = "Kaydet ve Sırala";
+
+            if(yeniVeri) {
+                render(yeniVeri);
+                document.querySelectorAll('#ekle-sekme input').forEach(i => i.value = '');
+                document.getElementById('tab-kutuphane').click();
+                document.getElementById("aramaKutusu").value = "";
+            }
+        }
+
+        function render(data) {
+            if(!data) return;
+            mevcutKutuphane = data;
+            document.querySelector('#tablo tbody').innerHTML = data.map(r => `
+            <tr id="row-kutuphane-${r.id}">
+                <td class="merkez"><strong>${r.id}</strong></td>
+                <td>${r.yazar}</td>
+                <td>${r.kitapAdi}</td>
+                <td class="merkez">${r.sayfa}</td>
+                <td class="merkez">${r.yil}</td>
+                <td>${r.yayinevi}</td>
+                <td class="islem-sutun">
+                    <button class="btn-duzenle" onclick="kutuphaneDuzenleModu(${r.id})">Düzenle</button>
+                    <button class="btn-sil" onclick="silOnayiIste(${r.id}, 'kutuphane')">Sil</button>
+                </td>
+            </tr>`).join('');
+            kutuphaneAra();
+        }
+
+        function kutuphaneDuzenleModu(id) {
+            kapatSatirDuzenle(); 
+            var kitap = mevcutKutuphane.find(k => k.id === id);
+            var tr = document.getElementById('row-kutuphane-' + id);
+            var editTr = document.createElement('tr');
+            editTr.id = 'aktif-duzenleme-satiri';
+            editTr.className = 'edit-row';
+            
+            editTr.innerHTML = `
+                <td colspan="7">
+                    <div class="edit-container">
+                        <input id="edit-yazar" value="${kitap.yazar}" placeholder="Yazar">
+                        <input id="edit-kitapAdi" value="${kitap.kitapAdi}" placeholder="Kitap Adı">
+                        <input id="edit-sayfa" value="${kitap.sayfa}" placeholder="Sayfa" style="max-width:80px;">
+                        <input id="edit-yil" value="${kitap.yil}" placeholder="Yıl" style="max-width:80px;">
+                        <input id="edit-yayinevi" value="${kitap.yayinevi}" placeholder="Yayınevi">
+                        <button class="btn-kaydet-inline" onclick="kaydetSatirKutuphane(${id})">Güncelle</button>
+                        <button class="btn-iptal-inline" onclick="kapatSatirDuzenle()">İptal</button>
+                    </div>
+                </td>
+            `;
+            tr.parentNode.insertBefore(editTr, tr.nextSibling);
+        }
+
+        async function kaydetSatirKutuphane(id) {
+            var btn = document.querySelector('.btn-kaydet-inline');
+            var orjMetin = btn.innerText;
+            btn.innerText = "Kaydediliyor...";
+            
+            var veri = { 
+                id: id,
+                yazar: document.getElementById('edit-yazar').value, 
+                kitapAdi: document.getElementById('edit-kitapAdi').value, 
+                sayfa: document.getElementById('edit-sayfa').value, 
+                yil: document.getElementById('edit-yil').value, 
+                yayinevi: document.getElementById('edit-yayinevi').value 
+            };
+            
+            const yeniVeri = await veriGonder('kitapDuzenle', veri, id);
+            if(yeniVeri) {
+                kapatSatirDuzenle();
+                render(yeniVeri);
+            } else {
+                btn.innerText = orjMetin;
+            }
+        }
+
+        // ==========================================
+        // ALINACAKLAR İŞLEMLERİ
+        // ==========================================
+        async function kaydetAlinacak() {
+            var btn = document.getElementById('btn-kaydet-alinacak');
+            var veri = { 
+                yazar: document.getElementById('alinacakYazar').value, 
+                kitapAdi: document.getElementById('alinacakKitapAdi').value 
+            };
+            
+            btn.innerText = "Kaydediliyor...";
+            const yeniVeri = await veriGonder('alinacakEkle', veri, null);
+            btn.innerText = "Kaydet ve Sırala";
+
+            if(yeniVeri) {
+                renderAlinacak(yeniVeri);
+                document.querySelectorAll('#alinacaklar-sekme > .card:first-child input').forEach(i => i.value = '');
+            }
+        }
+
+        function renderAlinacak(data) {
+            if(!data) return;
+            mevcutAlinacaklar = data;
+            document.querySelector('#tabloAlinacak tbody').innerHTML = data.map(r => `
+            <tr id="row-alinacak-${r.id}">
+                <td class="merkez"><strong>${r.id}</strong></td>
+                <td>${r.yazar}</td>
+                <td>${r.kitapAdi}</td>
+                <td class="islem-sutun">
+                    <button class="btn-duzenle" onclick="alinacakDuzenleModu(${r.id})">Düzenle</button>
+                    <button class="btn-sil" onclick="silOnayiIste(${r.id}, 'alinacak')">Sil</button>
+                </td>
+            </tr>`).join('');
+        }
+
+        function alinacakDuzenleModu(id) {
+            kapatSatirDuzenle(); 
+            var kitap = mevcutAlinacaklar.find(k => k.id === id);
+            var tr = document.getElementById('row-alinacak-' + id);
+            var editTr = document.createElement('tr');
+            editTr.id = 'aktif-duzenleme-satiri';
+            editTr.className = 'edit-row';
+            
+            editTr.innerHTML = `
+                <td colspan="4">
+                    <div class="edit-container">
+                        <input id="edit-alinacakYazar" value="${kitap.yazar}" placeholder="Yazar">
+                        <input id="edit-alinacakKitapAdi" value="${kitap.kitapAdi}" placeholder="Kitap Adı">
+                        <button class="btn-kaydet-inline" onclick="kaydetSatirAlinacak(${id})">Güncelle</button>
+                        <button class="btn-iptal-inline" onclick="kapatSatirDuzenle()">İptal</button>
+                    </div>
+                </td>
+            `;
+            tr.parentNode.insertBefore(editTr, tr.nextSibling);
+        }
+
+        async function kaydetSatirAlinacak(id) {
+            var btn = document.querySelector('.btn-kaydet-inline');
+            var orjMetin = btn.innerText;
+            btn.innerText = "Kaydediliyor...";
+
+            var veri = { 
+                id: id,
+                yazar: document.getElementById('edit-alinacakYazar').value, 
+                kitapAdi: document.getElementById('edit-alinacakKitapAdi').value 
+            };
+            
+            const yeniVeri = await veriGonder('alinacakDuzenle', veri, id);
+            if(yeniVeri) {
+                kapatSatirDuzenle();
+                renderAlinacak(yeniVeri);
+            } else {
+                btn.innerText = orjMetin;
+            }
+        }
+
+        // ==========================================
+        // ORTAK YARDIMCI FONKSİYONLAR
+        // ==========================================
+        function kapatSatirDuzenle() {
+            var acikSatir = document.getElementById('aktif-duzenleme-satiri');
+            if (acikSatir) acikSatir.remove();
+        }
+
+        function silOnayiIste(id, tur) {
+            silinecekId = id; 
+            silinecekTur = tur; 
+            document.getElementById('silOnayModal').style.display = 'block';
+        }
+
+        function modalKapat() {
+            silinecekId = null;
+            silinecekTur = null;
+            document.getElementById('silOnayModal').style.display = 'none';
+            document.querySelector('#silOnayModal .btn-onay').innerText = "Evet, Sil";
+        }
+
+        async function kesinSil() {
+            if(silinecekId !== null && silinecekTur !== null) {
+                kapatSatirDuzenle(); 
+                document.querySelector('#silOnayModal .btn-onay').innerText = "Siliniyor...";
+                
+                if(silinecekTur === 'kutuphane') {
+                    const yeniVeri = await veriGonder('kitapSil', null, silinecekId);
+                    if(yeniVeri) render(yeniVeri);
+                } else if(silinecekTur === 'alinacak') {
+                    const yeniVeri = await veriGonder('alinacakSil', null, silinecekId);
+                    if(yeniVeri) renderAlinacak(yeniVeri);
+                }
+                
+                modalKapat();
+            }
+        }
+    </script>
+</body>
+</html>
