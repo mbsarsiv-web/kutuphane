@@ -2,6 +2,7 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
+    <!-- MOBİL UYUMLULUK ETİKETİ -->
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Akıllı Kütüphane</title>
     <style>
@@ -10,9 +11,14 @@
         .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
         input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 15px; }
         
+        /* ARAMA KUTUSU VE İKONLARI */
         .arama-kapsayici { position: relative; margin-bottom: 15px; }
         .arama-ikon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
-        .arama-kutusu { width: 100%; border: 2px solid #007bff; border-radius: 20px; padding: 10px 15px 10px 40px; margin-bottom: 0; font-size: 15px; outline: none; transition: 0.3s; box-sizing: border-box; }
+        /* Yeni Temizleme Çarpı İkonu */
+        .arama-temizle { position: absolute; right: 15px; top: 50%; transform: translateY(-50%); font-size: 16px; color: #999; cursor: pointer; display: none; padding: 5px; user-select: none; }
+        .arama-temizle:hover { color: #dc3545; }
+        /* Arama kutusu sağdan ve soldan ikonlara yer açacak şekilde ayarlandı */
+        .arama-kutusu { width: 100%; border: 2px solid #007bff; border-radius: 20px; padding: 10px 40px; margin-bottom: 0; font-size: 15px; outline: none; transition: 0.3s; box-sizing: border-box; }
         .arama-kutusu:focus { box-shadow: 0 0 8px rgba(0, 123, 255, 0.4); }
 
         button { background: #007bff; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 15px; transition: 0.2s; }
@@ -62,7 +68,10 @@
             <div class="card">
                 <div class="arama-kapsayici">
                     <span class="arama-ikon">🔍</span>
-                    <input type="text" id="aramaKutusu" class="arama-kutusu" onkeyup="kutuphaneAra()" placeholder="Kütüphanede Ara (Yazar, Kitap Adı, Yayınevi)...">
+                    <!-- Hız ve uyumluluk için onkeyup yerine oninput eklendi -->
+                    <input type="text" id="aramaKutusu" class="arama-kutusu" oninput="kutuphaneAra()" placeholder="Kütüphanede Ara (Yazar, Kitap Adı, Yayınevi)...">
+                    <!-- Temizleme İkonu -->
+                    <span id="aramaTemizle" class="arama-temizle" onclick="aramaTemizleFonksiyonu()">✖</span>
                 </div>
                 
                 <div class="table-wrapper">
@@ -267,7 +276,16 @@
 
         function kutuphaneAra() {
             var input = document.getElementById("aramaKutusu");
+            var temizleBtn = document.getElementById("aramaTemizle");
             var filter = input.value.toLocaleLowerCase('tr-TR');
+            
+            // Eğer kutuda yazı varsa çarpıyı göster, yoksa gizle
+            if(input.value.length > 0) {
+                temizleBtn.style.display = "block";
+            } else {
+                temizleBtn.style.display = "none";
+            }
+
             var table = document.getElementById("tablo");
             var tr = table.getElementsByTagName("tbody")[0].getElementsByTagName("tr");
 
@@ -285,6 +303,14 @@
                 }
                 tr[i].style.display = (matchFound || filter === "") ? "" : "none";
             }
+        }
+
+        // Arama kutusunu tek tıkla temizleme fonksiyonu
+        function aramaTemizleFonksiyonu() {
+            var input = document.getElementById("aramaKutusu");
+            input.value = ""; // Kutuyu boşalt
+            kutuphaneAra(); // Aramayı yeniden tetikleyip tabloyu geri getir
+            input.focus(); // İmleci tekrar kutuya koy
         }
 
         function sekmeDegistir(evt, sekmeId) {
@@ -318,7 +344,10 @@
                 render(yeniVeri);
                 document.querySelectorAll('#ekle-sekme input').forEach(i => i.value = '');
                 document.getElementById('tab-kutuphane').click();
-                document.getElementById("aramaKutusu").value = "";
+                
+                var input = document.getElementById("aramaKutusu");
+                input.value = "";
+                kutuphaneAra();
             }
         }
 
@@ -465,22 +494,19 @@
         }
 
         // ==========================================
-        // SİLME VE ONAY İŞLEMLERİ (SIRA GÜNCELLENDİ)
+        // SİLME VE ONAY İŞLEMLERİ
         // ==========================================
         function kapatSatirDuzenle() {
             var acikSatir = document.getElementById('aktif-duzenleme-satiri');
             if (acikSatir) acikSatir.remove();
         }
 
-        // 1. ADIM: Sil'e basıldığında ÖNCE ŞİFRE kontrol edilir
         async function silOnayiIste(id, tur) {
             silinecekId = id; 
             silinecekTur = tur; 
             
-            // Şifreyi doğrula (kayıtlı değilse modal açılır, girmesini bekler)
             const sifre = await getSifre();
             if (sifre) {
-                // Şifre tamamsa "Emin misiniz?" onay penceresini aç
                 document.getElementById('silOnayModal').style.display = 'block';
             }
         }
@@ -492,7 +518,6 @@
             document.querySelector('#silOnayModal .btn-onay').innerText = "Evet, Sil";
         }
 
-        // 2. ADIM: "Evet, Sil" seçilirse direkt silme gerçekleşir
         async function kesinSil() {
             if(silinecekId !== null && silinecekTur !== null) {
                 kapatSatirDuzenle(); 
