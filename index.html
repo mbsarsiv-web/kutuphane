@@ -11,7 +11,10 @@
         .card { background: white; padding: 15px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-bottom: 20px; }
         input { width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box; font-size: 15px; }
         
-        .arama-kutusu { border: 2px solid #007bff; border-radius: 20px; padding: 10px 15px; margin-bottom: 15px; font-size: 15px; outline: none; transition: 0.3s; }
+        /* YENİ ARAMA KUTUSU TASARIMI */
+        .arama-kapsayici { position: relative; margin-bottom: 15px; }
+        .arama-ikon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); font-size: 16px; pointer-events: none; }
+        .arama-kutusu { width: 100%; border: 2px solid #007bff; border-radius: 20px; padding: 10px 15px 10px 40px; margin-bottom: 0; font-size: 15px; outline: none; transition: 0.3s; box-sizing: border-box; }
         .arama-kutusu:focus { box-shadow: 0 0 8px rgba(0, 123, 255, 0.4); }
 
         button { background: #007bff; color: white; border: none; padding: 10px; border-radius: 4px; cursor: pointer; width: 100%; font-weight: bold; font-size: 15px; transition: 0.2s; }
@@ -40,7 +43,7 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* ONAY MODALI */
+        /* ONAY MODALI VE ŞİFRE MODALI */
         .modal-arkaplan { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
         .modal-icerik { background-color: #fff; margin: 25% auto; padding: 20px; border-radius: 8px; width: 90%; max-width: 320px; text-align: center; box-shadow: 0 4px 8px rgba(0,0,0,0.2); }
         .modal-butonlar { display: flex; justify-content: space-between; margin-top: 20px; gap: 10px; }
@@ -63,7 +66,11 @@
         <!-- 1. MEVCUT KÜTÜPHANE SEKMESİ -->
         <div id="kutuphane-sekme" class="tab-content active">
             <div class="card">
-                <input type="text" id="aramaKutusu" class="arama-kutusu" onkeyup="kutuphaneAra()" placeholder="🔍 Kütüphanede Ara (Yazar, Kitap Adı, Yayınevi)...">
+                <!-- YENİ ARAMA KUTUSU TASARIMI -->
+                <div class="arama-kapsayici">
+                    <span class="arama-ikon">🔍</span>
+                    <input type="text" id="aramaKutusu" class="arama-kutusu" onkeyup="kutuphaneAra()" placeholder="Kütüphanede Ara (Yazar, Kitap Adı, Yayınevi)...">
+                </div>
                 
                 <div class="table-wrapper">
                     <table id="tablo">
@@ -135,6 +142,19 @@
             </div>
         </div>
     </div>
+
+    <!-- YENİ ŞİFRE GİRİŞ MODALI -->
+    <div id="sifreModal" class="modal-arkaplan">
+        <div class="modal-icerik">
+            <h4 style="margin-top: 0; color: #333;">Yönetici Onayı</h4>
+            <p style="color: #666; font-size: 14px; margin-bottom: 15px;">İşlem yapabilmek için lütfen yönetici şifrenizi girin:</p>
+            <input type="password" id="sifreInput" placeholder="Şifre" style="text-align: center; font-size: 18px; letter-spacing: 2px; border: 2px solid #007bff;" onkeyup="if(event.key === 'Enter') sifreOnay()">
+            <div class="modal-butonlar">
+                <button class="btn-iptal" onclick="sifreIptal()">İptal</button>
+                <button class="btn-onay" style="background: #28a745;" onclick="sifreOnay()">Onayla</button>
+            </div>
+        </div>
+    </div>
     
     <script>
         // ==========================================
@@ -149,17 +169,45 @@
         var mevcutAlinacaklar = [];
 
         // ==========================================
-        // GÜVENLİK VE VERİ TRANSFERİ (FETCH API)
+        // YENİ ŞİFRE YÖNETİMİ (PROMISE TABANLI)
         // ==========================================
         function getSifre() {
-            let sifre = localStorage.getItem('kutuphaneSifre');
-            if (!sifre) {
-                sifre = prompt("Kütüphane Yönetimi\nİşlem yapabilmek için lütfen yönetici şifrenizi girin:");
-                if (sifre) localStorage.setItem('kutuphaneSifre', sifre);
-            }
-            return sifre;
+            return new Promise((resolve) => {
+                let sifre = localStorage.getItem('kutuphaneSifre');
+                if (sifre) {
+                    resolve(sifre); // Kayıtlı şifre varsa direkt devam et
+                } else {
+                    // Kayıtlı şifre yoksa özel Modalı aç
+                    const modal = document.getElementById('sifreModal');
+                    const input = document.getElementById('sifreInput');
+                    modal.style.display = 'block';
+                    input.value = '';
+                    setTimeout(() => input.focus(), 100); // Açıldığında imleci içine konumlandır
+
+                    // Onaylama işlemi
+                    window.sifreOnay = function() {
+                        const girilenSifre = input.value;
+                        if (girilenSifre) {
+                            localStorage.setItem('kutuphaneSifre', girilenSifre);
+                            modal.style.display = 'none';
+                            resolve(girilenSifre);
+                        } else {
+                            alert("Şifre boş bırakılamaz!");
+                        }
+                    };
+
+                    // İptal etme işlemi
+                    window.sifreIptal = function() {
+                        modal.style.display = 'none';
+                        resolve(null);
+                    };
+                }
+            });
         }
 
+        // ==========================================
+        // VERİ TRANSFERİ (FETCH API)
+        // ==========================================
         async function veriGetir(islem) {
             document.getElementById('loader').style.display = 'block';
             try {
@@ -175,8 +223,9 @@
         }
 
         async function veriGonder(islem, veriObj, id) {
-            const sifre = getSifre();
-            if(!sifre) return null; // Kullanıcı iptal ettiyse durdur
+            // Şifreyi await ile bekletiyoruz (Modal açılırsa kullanıcının girmesini bekler)
+            const sifre = await getSifre();
+            if(!sifre) return null; // İptale basıldıysa işlemi durdur
 
             document.getElementById('loader').style.display = 'block';
             
@@ -193,6 +242,7 @@
                 if (sonuc.hata) {
                     alert("İşlem Başarısız: " + sonuc.hata);
                     if(sonuc.hata.includes("Yetkisiz")) {
+                        // Şifre yanlışsa sistemden sil, bir sonraki denemede tekrar şifre sorsun
                         localStorage.removeItem('kutuphaneSifre');
                     }
                     return null;
